@@ -1,8 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-X = np.random.randn(100, 1000) # 100 examples of 1000 points
+
+n_examples, hidden_layer_dim = 100, 100
+input_dim = 1000
+X = np.random.randn(n_examples, input_dim) # 100 examples of 1000 points
 n_layers = 20
-layer_dim = [100] * n_layers # each one has 100 neurons
+layer_dim = [hidden_layer_dim] * n_layers # each one has 100 neurons
 
 hs = [X]
 zs = [X]
@@ -11,7 +14,10 @@ ws = []
 # the forward pass
 for i in np.arange(n_layers):
 	h = hs[-1] # get the input into this hidden layer
-	W = np.random.normal(0, np.sqrt(2/(h.shape[0] + layer_dim[i])), size = (layer_dim[i], h.shape[0])) * 0.01
+	#W = np.random.randn(h.shape[0], layer_dim[i]) * np.sqrt(2)/(np.sqrt(200) * np.sqrt(3))
+	#W = np.random.uniform(-np.sqrt(6)/(200), np.sqrt(6)/200, size = (h.shape[0], layer_dim[i]))
+	W = np.random.normal(0, np.sqrt(2/(h.shape[0] + layer_dim[i])), size = (layer_dim[i], h.shape[0]))
+	#W = np.random.normal(0, np.sqrt(2/(h.shape[0] + layer_dim[i])), size = (layer_dim[i], h.shape[0])) * 0.01
 	z = np.dot(W, h)
 	h_out = z * (z > 0)
 	ws.append(W)
@@ -19,28 +25,33 @@ for i in np.arange(n_layers):
 	hs.append(h_out)
 
 
-dLdh = 100 * np.random.randn(100, 1000)
+
+dLdh = 100 * np.random.randn(hidden_layer_dim, input_dim)
 h_grads = [dLdh]
 w_grads = []
 print("zs has len: {}".format(len(zs)))
 # the backwards pass
 for i in np.flip(np.arange(1, n_layers), axis = 0):
 	# get the incoming gradient
-	incoming_loss_grad = dLdh[-1]
+	incoming_loss_grad = h_grads[-1]
 	# backprop through the relu
+	print(incoming_loss_grad.shape)
 	dLdz = incoming_loss_grad * (zs[i] > 0)
 	# get the gradient dL/dh_{i-1}, this will be the incoming grad into the next layer
 	h_grad = ws[i-1].T.dot(dLdz)
 	# get the gradient of the weights of this layer (dL/dw)
 	weight_grad = dLdz.dot(hs[i-1].T)
-	h_grads.append(h_grads)
+	h_grads.append(h_grad)
 	w_grads.append(weight_grad)
 
 # plot the resulting activatiosn
 for i, activation in enumerate(hs):
 	fig = plt.figure()
 	num_bins = 50
+	print('variance of linear units before relu is {}'.format(np.var(zs[i].ravel())))
 	print('variance is {}'.format(np.var(activation.ravel())))
+	ratio = np.var(zs[i].ravel()) / np.var(activation.ravel())
+	print('ratio is {}'.format(ratio))
 	n, bins, patches = plt.hist(activation.ravel(), num_bins, normed=1, facecolor='green', alpha=0.5)
 	plt.title('Activation at layer {}'.format(i))
 	plt.xlabel('Activation Value')
