@@ -8,22 +8,29 @@ n_layers = 20
 layer_dim = [hidden_layer_dim] * n_layers # each one has 100 neurons
 
 hs = [X]
+hs_not_batchnormed = [X] # saves the results before we do batchnorm, because we need this in the backward pass.
 zs = [X]
 ws = []
-
+gamma, beta = 1, 0
 # the forward pass
 for i in np.arange(n_layers):
 	h = hs[-1] # get the input into this hidden layer
 	W = np.random.normal(size = (layer_dim[i], h.shape[0])) * 0.01 # weight init: gaussian around 0
 	z = np.dot(W, h)
 	h_out = z * (z > 0)
+	# save the not batchnormmed part for backprop
+	hs_not_batchnormed.append(h_out)
+	# apply batch normalization
+	h_out = (h_out - np.mean(h_out, axis = 0)) / np.std(h_out, axis = 0)
+	# scale and shift
+	h_out = gamma * h_out + beta
 	ws.append(W)
 	zs.append(z)
 	hs.append(h_out)
 
 
 
-dLdh = 100 * np.random.randn(hidden_layer_dim, input_dim) # random incoming grad into our last layer
+dLdh = 0.01 * np.random.randn(hidden_layer_dim, input_dim) # random incoming grad into our last layer
 h_grads = [dLdh]
 w_grads = []
 
@@ -31,6 +38,18 @@ w_grads = []
 for i in np.flip(np.arange(1, n_layers), axis = 0):
 	# get the incoming gradient
 	incoming_loss_grad = h_grads[-1]
+	# backprop through the batchnorm layer
+	#the y_i is the restult of batch norm, so h_out or hs[i]
+	dldx_hat = incoming_loss_grad * gamma
+	dldvar = np.sum(dldx_hat * (hs_not_batchnormed[i] - np.mean(hs_not_batchnormed[i], axis = 0)) * -.5 * np.power(np.var(hs_not_batchnormed[i], axis = 0), -1.5), axis = 0)
+	dldmean = np.sum(dldx_hat * -1/np.std(hs_not_batchnormed[i], axis = 0), axis = 0) + dldvar * -2 * (hs_not_batchnormed[i] - np.mean(hs_not_batchnormed[i], axis = 0))/hs_not_batchnormed[i].shape[0]
+	# the following is dL/hs_not_batchnormmed[i] (aka dL/dx_i) in the paper!
+	dldx = dldx_hat * 1/np.std(hs_not_batchnormed[i], axis = 0) + dldvar * -2 * (hs_not_batchnormed[i] - np.mean(hs_not_batchnormed[i], axis = 0))/hs_not_batchnormed[i].shape[0] + dldmean/hs_not_batchnormed[i].shape[0]
+	# although we don't need it for this demo, for completeness we also compute the derivatives with respect to gamma and beta. 
+	dldgamma = incoming_loss_grad * hs[i]
+	dldbeta = np.sum(incoming_loss_grad)
+	# now incoming_loss_grad should be replaced by that backpropped result
+	incoming_loss_grad = dldx
 	# backprop through the relu
 	print(incoming_loss_grad.shape)
 	dLdz = incoming_loss_grad * (zs[i] > 0)
@@ -55,7 +74,7 @@ for i, activation in enumerate(hs):
 	plt.ylabel('Number of Activations')
 	# Tweak spacing to prevent clipping of ylabel
 	plt.subplots_adjust(left=0.15)
-	#plt.savefig('activation-plots/act-{}.png'.format(i))	
+	plt.savefig('activation-plots/act-{}.png'.format(i))	
 	plt.ticklabel_format(axis='x',style='sci',scilimits=(1,4))
 
 w_grads = list(reversed(w_grads))
@@ -68,7 +87,7 @@ for i, grad in enumerate(w_grads):
 	plt.ylabel('Number of Gradients')
 	# Tweak spacing to prevent clipping of ylabel
 	plt.subplots_adjust(left=0.15)
-	#plt.savefig('gradient-plots/grad-{}.png'.format(i))	
+	plt.savefig('gradient-plots/grad-{}.png'.format(i))	
 	plt.ticklabel_format(axis='x',style='sci',scilimits=(1,4))	
 
 # first_hidden_activation = hs[1]
