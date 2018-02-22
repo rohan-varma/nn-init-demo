@@ -24,8 +24,8 @@ for i in np.arange(n_layers):
 
 
 dLdh = 100 * np.random.randn(hidden_layer_dim, input_dim) # random incoming grad into our last layer
-h_grads = [dLdh]
-w_grads = []
+h_grads = [dLdh] # store the incoming grads into each layer
+w_grads = [] # store dL/dw for each layer
 
 # the backwards pass
 for i in np.flip(np.arange(1, n_layers), axis = 0):
