@@ -77,7 +77,6 @@ for i, activation in enumerate(hs):
 	plt.savefig('activation-plots/act-{}.png'.format(i))	
 	plt.ticklabel_format(axis='x',style='sci',scilimits=(1,4))
 
-
 w_grads = list(reversed(w_grads))
 for i, grad in enumerate(w_grads):
 	fig = plt.figure()
